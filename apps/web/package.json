@@ -1,0 +1,16 @@
+{
+  "name": "@semaforo/web",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "typecheck": "tsc -p ."
+  },
+  "dependencies": {
+    "@semaforo/shared": "workspace:*"
+  },
+  "devDependencies": {
+    "vite": "^8.3.8"
+  }
+}

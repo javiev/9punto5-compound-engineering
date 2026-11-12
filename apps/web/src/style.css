@@ -1,0 +1,46 @@
+body {
+  margin: 0;
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  background: #1c1f24;
+  color: #e8e8e8;
+  font-family: system-ui, sans-serif;
+}
+
+main {
+  display: grid;
+  justify-items: center;
+  gap: 1rem;
+}
+
+.semaforo {
+  display: grid;
+  gap: 1rem;
+  padding: 1.25rem;
+  border-radius: 2rem;
+  background: #0b0c0e;
+}
+
+.luz {
+  width: min(7rem, 28vw);
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: var(--color);
+  opacity: 0.15;
+}
+
+.luz.encendida {
+  opacity: 1;
+  box-shadow: 0 0 2.5rem var(--color);
+}
+
+.luz[data-color='rojo'] { --color: #ff3b30; }
+.luz[data-color='amarillo'] { --color: #ffcc00; }
+.luz[data-color='verde'] { --color: #34c759; }
+
+#estado {
+  margin: 0;
+  font-size: 1.25rem;
+  text-transform: capitalize;
+}

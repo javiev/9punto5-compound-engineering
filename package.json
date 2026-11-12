@@ -1,0 +1,17 @@
+{
+  "name": "9punto5-compund-engineering-plugin",
+  "version": "1.0.0",
+  "description": "Semáforo sincronizado por WebSocket",
+  "private": true,
+  "packageManager": "pnpm@10.26.2",
+  "scripts": {
+    "dev": "pnpm -r --parallel dev",
+    "test": "pnpm -r test",
+    "typecheck": "pnpm -r typecheck"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.6",
+    "tsx": "^4.23.15",
+    "typescript": "^7.0.2"
+  }
+}
