@@ -7,6 +7,7 @@ import {
   STREETS_PER_AXIS,
   VOLUME,
   WS_PORT,
+  isGreen,
   parseSnapshot,
   type Action,
   type Phase,
@@ -89,7 +90,7 @@ function show(snapshot: Snapshot) {
     if (button.dataset.phase === phase) return
     button.dataset.phase = phase
     // aria-disabled en vez de disabled: el botón conserva el foco del teclado mientras el cruce cambia.
-    button.setAttribute('aria-disabled', String(!phase.endsWith('green')))
+    button.setAttribute('aria-disabled', String(!isGreen(phase)))
     button.setAttribute('aria-label', `${button.dataset.name}: ${PHASE_TEXT[phase]}`)
   })
 }

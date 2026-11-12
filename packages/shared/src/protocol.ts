@@ -1,10 +1,8 @@
 import { CROSSING_COUNT, type City, type Phase, type Settings } from './sim'
 
 export const WS_PORT = 3001
-/** Cada cuánto envía el servidor una foto; el navegador interpola el movimiento entre dos fotos. */
 export const SNAPSHOT_INTERVAL_MS = 100
 
-/** Estado completo de la ciudad, tal como lo envía el servidor. Cada auto va como [id, pista, posición]. */
 export interface Snapshot {
   type: 'snapshot'
   cars: [id: number, lane: number, s: number][]
@@ -37,7 +35,6 @@ function parseJson(text: string): any {
   }
 }
 
-/** Devuelve la foto, o undefined si el texto no lo es. */
 export function parseSnapshot(text: string): Snapshot | undefined {
   const message = parseJson(text)
   const isSnapshot = message?.type === 'snapshot' && Array.isArray(message.cars) && Array.isArray(message.crossings)
@@ -47,7 +44,6 @@ export function parseSnapshot(text: string): Snapshot | undefined {
 const isNumber = (value: unknown) => typeof value === 'number' && Number.isFinite(value)
 const isOptionalNumber = (value: unknown) => value === undefined || isNumber(value)
 
-/** Devuelve la acción que envió un navegador, o undefined si no es válida. Los ajustes se recortan al aplicarlos. */
 export function parseAction(text: string): Action | undefined {
   const message = parseJson(text)
   if (message?.type === 'advance') {

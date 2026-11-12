@@ -7,25 +7,23 @@ const TICK_MS = 50
 const TICKS_PER_SNAPSHOT = SNAPSHOT_INTERVAL_MS / TICK_MS
 const MAX_MESSAGE_BYTES = 1024
 
-/**
- * Arranca la ciudad: el servidor corre la simulación, envía a todos la foto completa
- * del estado y aplica las acciones que manda cualquier cliente.
- */
 export async function startServer({ port = WS_PORT, random = Math.random } = {}) {
   const wss = new WebSocketServer({ port, maxPayload: MAX_MESSAGE_BYTES })
   await once(wss, 'listening')
 
-  let city = createCity()
+  let city = createCity(random)
   let ticks = 0
 
   const openClients = () => [...wss.clients].filter((client) => client.readyState === WebSocket.OPEN)
-  const snapshot = () => JSON.stringify(toSnapshot(city, openClients().length))
+  const snapshot = (clients: number) => JSON.stringify(toSnapshot(city, clients))
 
   const timer = setInterval(() => {
     city = step(city, TICK_MS, random)
     if (++ticks % TICKS_PER_SNAPSHOT !== 0) return
-    const message = snapshot()
-    for (const client of openClients()) client.send(message)
+    const clients = openClients()
+    if (clients.length === 0) return
+    const message = snapshot(clients.length)
+    for (const client of clients) client.send(message)
   }, TICK_MS)
 
   wss.on('connection', (client) => {
@@ -37,7 +35,7 @@ export async function startServer({ port = WS_PORT, random = Math.random } = {})
       if (action?.type === 'advance') city = advanceCrossing(city, action.crossing)
       if (action?.type === 'settings') city = withSettings(city, action)
     })
-    client.send(snapshot())
+    client.send(snapshot(openClients().length))
   })
 
   return {

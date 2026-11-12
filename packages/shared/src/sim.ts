@@ -16,7 +16,6 @@ export const LANE_COUNT = STREETS_PER_AXIS * 2 * 2
 export const CROSSING_COUNT = STREETS_PER_AXIS * STREETS_PER_AXIS
 
 const SPACING = CAR_LENGTH + CAR_GAP
-// Autos que caben detenidos entre la salida de un cruce y la línea de detención del siguiente.
 const BLOCK_CAPACITY = Math.floor((STOP_LINES[1]! - (CROSSING_CENTERS[0] + BOX_HALF) + CAR_GAP) / SPACING)
 
 export type Axis = 'h' | 'v'
@@ -50,7 +49,6 @@ export interface City {
 // Pistas 0 a 5: calles horizontales (dos sentidos por calle). Pistas 6 a 11: verticales.
 export const laneAxis = (lane: number): Axis => (lane < STREETS_PER_AXIS * 2 ? 'h' : 'v')
 export const laneStreet = (lane: number) => Math.floor(lane / 2) % STREETS_PER_AXIS
-/** El sentido contrario recorre la calle al revés. */
 export const laneIsReversed = (lane: number) => lane % 2 === 1
 
 /** Cruce (fila * 3 + columna) que la pista encuentra en su k-ésimo lugar. */
@@ -60,10 +58,14 @@ export function crossingOfLane(lane: number, k: number): number {
   return laneAxis(lane) === 'h' ? street * STREETS_PER_AXIS + along : along * STREETS_PER_AXIS + street
 }
 
-export function createCity(): City {
+/** Cada cruce parte con el paso en una calle al azar y a mitad de su verde, para que no cambien todos juntos. */
+export function createCity(random: () => number = Math.random): City {
   return {
     cars: [],
-    crossings: Array.from({ length: CROSSING_COUNT }, () => ({ phase: 'h-green' as Phase, elapsedMs: 0 })),
+    crossings: Array.from({ length: CROSSING_COUNT }, () => ({
+      phase: random() < 0.5 ? 'h-green' : 'v-green',
+      elapsedMs: random() * GREEN_MS.initial,
+    })),
     settings: { volume: VOLUME.initial, greenMs: GREEN_MS.initial },
     waiting: 0,
     nextId: 0,
@@ -88,7 +90,7 @@ const NEXT_PHASE: Record<Phase, Phase> = {
   'v-green': 'v-yellow',
   'v-yellow': 'h-green',
 }
-const isGreen = (phase: Phase) => phase.endsWith('green')
+export const isGreen = (phase: Phase) => phase.endsWith('green')
 
 /** Adelanta el cambio de un cruce en verde; en amarillo el cambio ya está en curso. */
 export function advanceCrossing(city: City, crossing: number): City {
@@ -119,7 +121,6 @@ export function step(city: City, dtMs: number, random: () => number = Math.rando
   let nextId = city.nextId
 
   for (let lane = 0; lane < LANE_COUNT; lane++) {
-    // De adelante hacia atrás: cada auto se mueve conociendo la posición nueva del que lo precede.
     const moved: Car[] = []
     const inLane = city.cars.filter((car) => car.lane === lane).sort((a, b) => b.s - a.s)
 

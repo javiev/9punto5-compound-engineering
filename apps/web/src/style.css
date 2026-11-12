@@ -51,7 +51,6 @@ body.desconectado .ciudad {
   filter: grayscale(1);
 }
 
-/* Más grande que el cruce dibujado, para que sea fácil de tocar. */
 .cruce {
   position: absolute;
   width: 14%;

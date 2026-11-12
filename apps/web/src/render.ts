@@ -5,9 +5,11 @@ import {
   LANE_LENGTH,
   SNAPSHOT_INTERVAL_MS,
   STREETS_PER_AXIS,
+  isGreen,
   laneAxis,
   laneIsReversed,
   laneStreet,
+  type Axis,
   type Phase,
   type Snapshot,
 } from '@semaforo/shared'
@@ -16,13 +18,12 @@ const CAR_WIDTH = 5
 const LANE_OFFSET = (BOX_HALF - CAR_WIDTH) / 2
 const LIGHT_COLORS = { green: '#34c759', yellow: '#ffcc00', red: '#ff3b30' }
 
-function lightColor(phase: Phase, axis: 'h' | 'v') {
+function lightColor(phase: Phase, axis: Axis) {
   if (phase === `${axis}-green`) return LIGHT_COLORS.green
   if (phase === `${axis}-yellow`) return LIGHT_COLORS.yellow
   return LIGHT_COLORS.red
 }
 
-/** Dibuja la ciudad en el lienzo y suaviza el movimiento entre una foto y la siguiente. */
 export function createRenderer(canvas: HTMLCanvasElement) {
   const ctx = canvas.getContext('2d')!
   ctx.scale(canvas.width / LANE_LENGTH, canvas.height / LANE_LENGTH)
@@ -42,7 +43,6 @@ export function createRenderer(canvas: HTMLCanvasElement) {
   }
 
   function drawCrossing(phase: Phase, x: number, y: number) {
-    // Una barra en la línea de detención de cada llegada, con el color de su calle.
     ctx.fillStyle = lightColor(phase, 'h')
     ctx.fillRect(x - BOX_HALF - 2, y, 2, BOX_HALF)
     ctx.fillRect(x + BOX_HALF, y - BOX_HALF, 2, BOX_HALF)
@@ -51,7 +51,7 @@ export function createRenderer(canvas: HTMLCanvasElement) {
     ctx.fillRect(x, y + BOX_HALF, BOX_HALF, 2)
 
     // Una barra orientada según la calle que tiene el paso, para no depender solo del color.
-    ctx.fillStyle = phase.endsWith('green') ? '#ffffff' : '#ffffff66'
+    ctx.fillStyle = isGreen(phase) ? '#ffffff' : '#ffffff66'
     if (phase.startsWith('h')) ctx.fillRect(x - 7, y - 1.5, 14, 3)
     else ctx.fillRect(x - 1.5, y - 7, 3, 14)
   }

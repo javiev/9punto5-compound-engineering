@@ -4,7 +4,7 @@ import { parseAction, parseSnapshot, toSnapshot } from './protocol'
 import { advanceCrossing, createCity } from './sim'
 
 test('una foto se interpreta de vuelta con el mismo estado', () => {
-  const city = advanceCrossing({ ...createCity(), cars: [{ id: 1, lane: 0, s: 12.34 }, { id: 2, lane: 7, s: 300 }], waiting: 1 }, 4)
+  const city = advanceCrossing({ ...createCity(() => 0), cars: [{ id: 1, lane: 0, s: 12.34 }, { id: 2, lane: 7, s: 300 }], waiting: 1 }, 4)
   const snapshot = parseSnapshot(JSON.stringify(toSnapshot(city, 3)))
   assert.deepEqual(snapshot, {
     type: 'snapshot',

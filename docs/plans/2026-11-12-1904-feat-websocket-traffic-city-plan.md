@@ -170,7 +170,7 @@ Product Contract preservation: Product Contract unchanged.
 Decisions made without asking, because this planning run asked no questions:
 
 - The numeric values in KTD6 are a first approximation chosen so that visible jams form; they may need tuning once the city is seen running.
-- All nine crossings start in the same phase, giving the right of way to the horizontal street. Starting them alternated would make shorter greens relieve traffic instead of jamming it, the opposite of what the success criteria ask for.
+- Each crossing starts with the right of way on a random street and at a random moment of its green, at the user's request: crossings must not all change together. The server draws the randomness, so every browser sees the same thing.
 - The waiting-cars counter counts the cars that did not move in the last simulation step.
 - With no connection, the page shows the last city it received, dimmed and frozen, under a "disconnected" notice.
 

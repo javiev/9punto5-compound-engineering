@@ -33,7 +33,7 @@ function seeded(seed: number) {
 
 /** Ciudad sin autos nuevos y con verdes largos, para aislar lo que se prueba. */
 function quietCity(cars: Car[], phases: Record<number, Phase> = {}): City {
-  const city = withSettings(createCity(), { volume: 0, greenMs: 20_000 })
+  const city = withSettings(createCity(always), { volume: 0, greenMs: 20_000 })
   return {
     ...city,
     cars,
@@ -79,7 +79,7 @@ test('un auto no entra al cruce si la cuadra siguiente está llena', () => {
 })
 
 test('un cruce pasa de verde a amarillo y luego da el paso a la otra calle', () => {
-  let city = withSettings(createCity(), { volume: 0 })
+  let city = withSettings(createCity(always), { volume: 0 })
   city = run(city, 5950)
   assert.equal(phaseOf(city, 0), 'h-green')
   city = step(city, DT, never)
@@ -89,7 +89,7 @@ test('un cruce pasa de verde a amarillo y luego da el paso a la otra calle', () 
 })
 
 test('adelantar un cruce en verde lo pone en amarillo y después sigue solo', () => {
-  let city = advanceCrossing(withSettings(createCity(), { volume: 0 }), 4)
+  let city = advanceCrossing(withSettings(createCity(always), { volume: 0 }), 4)
   assert.equal(phaseOf(city, 4), 'h-yellow')
   assert.equal(phaseOf(city, 3), 'h-green')
   city = run(city, 2000)
@@ -108,11 +108,11 @@ test('un auto que recorre su pista completa sale del mapa', () => {
 })
 
 test('con tráfico en 0 no aparecen autos', () => {
-  assert.equal(run(withSettings(createCity(), { volume: 0 }), 60_000, seeded(1)).cars.length, 0)
+  assert.equal(run(withSettings(createCity(always), { volume: 0 }), 60_000, seeded(1)).cars.length, 0)
 })
 
 test('con tráfico en 60 aparece cerca de un auto por segundo en cada entrada', () => {
-  const city = run(withSettings(createCity(), { volume: 60 }), 5000, seeded(2))
+  const city = run(withSettings(createCity(always), { volume: 60 }), 5000, seeded(2))
   assert.ok(city.nextId >= 40 && city.nextId <= 80, `aparecieron ${city.nextId}`)
 })
 
@@ -122,14 +122,21 @@ test('no aparece un auto si la entrada de su pista está ocupada', () => {
   assert.equal(city.cars.length, LANE_COUNT)
 })
 
+test('los cruces parten en fases y momentos distintos', () => {
+  const { crossings } = createCity(seeded(4))
+  assert.deepEqual(new Set(crossings.map((crossing) => crossing.phase)), new Set(['h-green', 'v-green']))
+  assert.equal(new Set(crossings.map((crossing) => crossing.elapsedMs)).size, crossings.length)
+  assert.ok(crossings.every((crossing) => crossing.elapsedMs >= 0 && crossing.elapsedMs < 6000))
+})
+
 test('los ajustes fuera de rango se recortan', () => {
-  assert.deepEqual(withSettings(createCity(), { volume: 500, greenMs: 1000 }).settings, { volume: 60, greenMs: 2000 })
-  assert.deepEqual(withSettings(createCity(), { volume: -3 }).settings, { volume: 0, greenMs: 6000 })
+  assert.deepEqual(withSettings(createCity(always), { volume: 500, greenMs: 1000 }).settings, { volume: 60, greenMs: 2000 })
+  assert.deepEqual(withSettings(createCity(always), { volume: -3 }).settings, { volume: 0, greenMs: 6000 })
 })
 
 test('con tráfico máximo y cruces adelantados al azar no hay choques ni cruces compartidos', () => {
   const random = seeded(3)
-  let city = withSettings(createCity(), { volume: 60 })
+  let city = withSettings(createCity(always), { volume: 60 })
   for (let tick = 0; tick < 6000; tick++) {
     if (random() < 0.01) city = advanceCrossing(city, Math.floor(random() * 9))
     city = step(city, DT, random)

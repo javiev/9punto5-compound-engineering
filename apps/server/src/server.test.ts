@@ -5,8 +5,11 @@ import { WebSocket } from 'ws'
 import { parseSnapshot, type Action, type Snapshot } from '@semaforo/shared'
 import { startServer } from './server'
 
+// Azar fijo: todos los cruces parten con paso horizontal y no aparecen autos.
+const aligned = () => 0.4
+
 /** Arranca un servidor en un puerto libre y lo cierra al terminar. */
-async function withServer(run: (port: number) => Promise<void>, random?: () => number) {
+async function withServer(run: (port: number) => Promise<void>, random = aligned) {
   const server = await startServer({ port: 0, random })
   try {
     await run(server.port)
