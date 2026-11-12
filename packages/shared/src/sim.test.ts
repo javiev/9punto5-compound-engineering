@@ -62,6 +62,41 @@ test('los autos hacen fila ante el rojo y salen en orden con el verde', () => {
   assert.equal(city.waiting, 0)
 })
 
+test('cada pista encuentra los cruces de su calle, en el orden de su sentido', () => {
+  const expected: [lane: number, crossings: number[]][] = [
+    [0, [0, 1, 2]], // primera calle horizontal, hacia el este
+    [1, [2, 1, 0]], // la misma, hacia el oeste
+    [4, [6, 7, 8]], // tercera calle horizontal, hacia el este
+    [6, [0, 3, 6]], // primera calle vertical, hacia el sur
+    [7, [6, 3, 0]], // la misma, hacia el norte
+    [11, [8, 5, 2]], // tercera calle vertical, hacia el norte
+  ]
+  for (const [lane, crossings] of expected) {
+    assert.deepEqual([0, 1, 2].map((k) => crossingOfLane(lane, k)), crossings, `pista ${lane}`)
+  }
+})
+
+test('cada pista obedece el semáforo de su propio cruce y no el de otro', () => {
+  // Un auto por pista a punto de llegar a su primer cruce: [pista, ese cruce, otro cruce de la misma calle].
+  const cases: [lane: number, own: number, other: number][] = [
+    [1, 2, 0],
+    [6, 0, 6],
+    [7, 6, 0],
+  ]
+  for (const [lane, own, other] of cases) {
+    const axis = laneAxis(lane)
+    const red: Phase = axis === 'h' ? 'v-green' : 'h-green'
+    const green: Phase = `${axis}-green`
+    const car = { id: 1, lane, s: 80 }
+
+    const stopped = run(quietCity([car], { [own]: red, [other]: green }), 1000)
+    assert.equal(stopped.cars[0]!.s, STOP_LINES[0], `pista ${lane} debe detenerse ante su cruce en rojo`)
+
+    const passed = run(quietCity([car], { [own]: green, [other]: red }), 1000)
+    assert.equal(passed.cars[0]!.s, 120, `pista ${lane} no debe obedecer el rojo de otro cruce`)
+  }
+})
+
 test('adelantar un cruce en amarillo no cambia nada', () => {
   const city = quietCity([], { 4: 'h-yellow' })
   city.crossings[4]!.elapsedMs = 500

@@ -27,7 +27,7 @@ export function toSnapshot(city: City, clients: number): Snapshot {
   }
 }
 
-function parseJson(text: string): any {
+function parseJson(text: string): unknown {
   try {
     return JSON.parse(text)
   } catch {
@@ -36,19 +36,29 @@ function parseJson(text: string): any {
 }
 
 export function parseSnapshot(text: string): Snapshot | undefined {
-  const message = parseJson(text)
-  const isSnapshot = message?.type === 'snapshot' && Array.isArray(message.cars) && Array.isArray(message.crossings)
-  return isSnapshot ? message : undefined
+  const message = parseJson(text) as Partial<Snapshot> | null
+  const isSnapshot =
+    message?.type === 'snapshot' &&
+    Array.isArray(message.cars) &&
+    Array.isArray(message.crossings) &&
+    message.crossings.length === CROSSING_COUNT &&
+    isNumber(message.settings?.volume) &&
+    isNumber(message.settings?.greenMs) &&
+    isNumber(message.clients) &&
+    isNumber(message.waiting)
+  return isSnapshot ? (message as Snapshot) : undefined
 }
 
-const isNumber = (value: unknown) => typeof value === 'number' && Number.isFinite(value)
-const isOptionalNumber = (value: unknown) => value === undefined || isNumber(value)
+const isNumber = (value: unknown): value is number => typeof value === 'number' && Number.isFinite(value)
+const isOptionalNumber = (value: unknown): value is number | undefined => value === undefined || isNumber(value)
+const isCrossing = (value: unknown): value is number =>
+  Number.isInteger(value) && (value as number) >= 0 && (value as number) < CROSSING_COUNT
 
 export function parseAction(text: string): Action | undefined {
-  const message = parseJson(text)
+  const message = parseJson(text) as Record<string, unknown> | null
   if (message?.type === 'advance') {
     const { crossing } = message
-    return Number.isInteger(crossing) && crossing >= 0 && crossing < CROSSING_COUNT ? { type: 'advance', crossing } : undefined
+    return isCrossing(crossing) ? { type: 'advance', crossing } : undefined
   }
   if (message?.type === 'settings') {
     const { volume, greenMs } = message

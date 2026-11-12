@@ -17,7 +17,16 @@ test('una foto se interpreta de vuelta con el mismo estado', () => {
 })
 
 test('lo que no es una foto se ignora', () => {
-  for (const text of ['no es json', 'null', '{"type":"otro"}', '{"type":"snapshot"}']) {
+  const complete = toSnapshot(createCity(() => 0), 1)
+  const incomplete = [
+    { ...complete, settings: undefined },
+    { ...complete, settings: { volume: 20 } },
+    { ...complete, clients: 'dos' },
+    { ...complete, waiting: undefined },
+    { ...complete, crossings: complete.crossings.slice(1) },
+    { ...complete, cars: undefined },
+  ].map((snapshot) => JSON.stringify(snapshot))
+  for (const text of ['no es json', 'null', '{"type":"otro"}', '{"type":"snapshot"}', ...incomplete]) {
     assert.equal(parseSnapshot(text), undefined, text)
   }
 })

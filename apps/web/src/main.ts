@@ -16,6 +16,8 @@ import {
 import { createRenderer } from './render'
 
 const RETRY_MS = 1000
+// Tras un cambio local, las fotos que venían en camino traen todavía el valor anterior.
+const LOCAL_INPUT_QUIET_MS = 300
 const PHASE_TEXT: Record<Phase, string> = {
   'h-green': 'paso horizontal',
   'h-yellow': 'cambiando',
@@ -59,8 +61,20 @@ volume.min = String(VOLUME.min)
 volume.max = String(VOLUME.max)
 green.min = String(GREEN_MS.min / 1000)
 green.max = String(GREEN_MS.max / 1000)
-volume.addEventListener('input', () => send({ type: 'settings', volume: volume.valueAsNumber, greenMs: undefined }))
-green.addEventListener('input', () => send({ type: 'settings', volume: undefined, greenMs: green.valueAsNumber * 1000 }))
+const lastLocalInput = new Map<HTMLInputElement, number>()
+function onLocalInput(control: HTMLInputElement, action: () => Action) {
+  control.addEventListener('input', () => {
+    lastLocalInput.set(control, performance.now())
+    send(action())
+  })
+}
+onLocalInput(volume, () => ({ type: 'settings', volume: volume.valueAsNumber, greenMs: undefined }))
+onLocalInput(green, () => ({ type: 'settings', volume: undefined, greenMs: green.valueAsNumber * 1000 }))
+
+/** Verdadero mientras alguien arrastra el control o acaba de cambiarlo: las fotos no se lo mueven de la mano. */
+function isBeingChanged(control: HTMLInputElement) {
+  return control.matches(':active') || performance.now() - (lastLocalInput.get(control) ?? -Infinity) < LOCAL_INPUT_QUIET_MS
+}
 
 function setConnected(connected: boolean) {
   document.body.classList.toggle('desconectado', !connected)
@@ -79,9 +93,8 @@ function show(snapshot: Snapshot) {
   clients.textContent = String(snapshot.clients)
   waiting.textContent = String(snapshot.waiting)
 
-  // Mientras alguien arrastra un control, las fotos no se lo mueven de la mano.
-  if (!volume.matches(':active')) volume.valueAsNumber = snapshot.settings.volume
-  if (!green.matches(':active')) green.valueAsNumber = snapshot.settings.greenMs / 1000
+  if (!isBeingChanged(volume)) volume.valueAsNumber = snapshot.settings.volume
+  if (!isBeingChanged(green)) green.valueAsNumber = snapshot.settings.greenMs / 1000
   volumeValue.textContent = String(snapshot.settings.volume)
   greenValue.textContent = String(snapshot.settings.greenMs / 1000)
 

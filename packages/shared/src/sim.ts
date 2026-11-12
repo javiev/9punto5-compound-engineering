@@ -58,7 +58,7 @@ export function crossingOfLane(lane: number, k: number): number {
   return laneAxis(lane) === 'h' ? street * STREETS_PER_AXIS + along : along * STREETS_PER_AXIS + street
 }
 
-/** Cada cruce parte con el paso en una calle al azar y a mitad de su verde, para que no cambien todos juntos. */
+/** Cada cruce parte con el paso en una calle al azar y en un momento al azar de su verde, para que no cambien todos juntos. */
 export function createCity(random: () => number = Math.random): City {
   return {
     cars: [],
