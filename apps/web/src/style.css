@@ -1,46 +1,98 @@
 body {
   margin: 0;
-  min-height: 100vh;
-  display: grid;
-  place-items: center;
   background: #1c1f24;
   color: #e8e8e8;
   font-family: system-ui, sans-serif;
 }
 
 main {
-  display: grid;
-  justify-items: center;
-  gap: 1rem;
-}
-
-.semaforo {
+  box-sizing: border-box;
+  width: min(100%, 42rem);
+  margin: 0 auto;
+  padding: 1rem;
   display: grid;
   gap: 1rem;
-  padding: 1.25rem;
-  border-radius: 2rem;
-  background: #0b0c0e;
 }
 
-.luz {
-  width: min(7rem, 28vw);
-  aspect-ratio: 1;
-  border-radius: 50%;
-  background: var(--color);
-  opacity: 0.15;
+.barra {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 1.5rem;
+  min-height: 1.5rem;
 }
 
-.luz.encendida {
-  opacity: 1;
-  box-shadow: 0 0 2.5rem var(--color);
-}
-
-.luz[data-color='rojo'] { --color: #ff3b30; }
-.luz[data-color='amarillo'] { --color: #ffcc00; }
-.luz[data-color='verde'] { --color: #34c759; }
-
-#estado {
+.barra p {
   margin: 0;
-  font-size: 1.25rem;
-  text-transform: capitalize;
+}
+
+.barra output {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+#aviso {
+  color: #ffcc00;
+}
+
+.ciudad {
+  position: relative;
+  aspect-ratio: 1;
+}
+
+.ciudad canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: 0.5rem;
+}
+
+body.desconectado .ciudad {
+  opacity: 0.4;
+  filter: grayscale(1);
+}
+
+/* Más grande que el cruce dibujado, para que sea fácil de tocar. */
+.cruce {
+  position: absolute;
+  width: 14%;
+  aspect-ratio: 1;
+  transform: translate(-50%, -50%);
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  cursor: pointer;
+}
+
+.cruce:hover:not([aria-disabled='true']) {
+  background: #ffffff26;
+}
+
+.cruce:focus-visible {
+  outline: 3px solid #ffffff;
+  outline-offset: -3px;
+}
+
+.cruce[aria-disabled='true'] {
+  cursor: default;
+}
+
+.controles {
+  display: grid;
+  gap: 1rem;
+}
+
+.controles label {
+  display: grid;
+  gap: 0.25rem;
+}
+
+.controles output {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.controles input {
+  width: 100%;
+  margin: 0;
 }

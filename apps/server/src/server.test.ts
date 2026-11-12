@@ -2,15 +2,12 @@ import assert from 'node:assert/strict'
 import { setTimeout as sleep } from 'node:timers/promises'
 import { test } from 'node:test'
 import { WebSocket } from 'ws'
-import { parseState } from '@semaforo/shared'
+import { parseSnapshot, type Action, type Snapshot } from '@semaforo/shared'
 import { startServer } from './server'
 
-const TICK = 100
-const durations = { rojo: TICK, verde: TICK, amarillo: TICK }
-
-/** Arranca un servidor con ciclo rápido en un puerto libre y lo cierra al terminar. */
-async function withServer(run: (port: number) => Promise<void>) {
-  const server = await startServer({ port: 0, durations })
+/** Arranca un servidor en un puerto libre y lo cierra al terminar. */
+async function withServer(run: (port: number) => Promise<void>, random?: () => number) {
+  const server = await startServer({ port: 0, random })
   try {
     await run(server.port)
   } finally {
@@ -18,49 +15,103 @@ async function withServer(run: (port: number) => Promise<void>) {
   }
 }
 
-/** Se conecta y devuelve los primeros `count` colores recibidos. */
-function collect(port: number, count: number, onOpen?: (ws: WebSocket) => void) {
-  return new Promise<unknown[]>((resolve, reject) => {
-    const colors: unknown[] = []
-    const ws = new WebSocket(`ws://localhost:${port}`)
-    ws.on('error', reject)
-    ws.on('open', () => onOpen?.(ws))
-    ws.on('message', (data) => {
-      colors.push(parseState(data.toString()))
-      if (colors.length === count) {
-        ws.close()
-        resolve(colors)
-      }
-    })
+/** Cliente de prueba: `next` espera la próxima foto que cumpla la condición. */
+function connect(port: number) {
+  const socket = new WebSocket(`ws://localhost:${port}`)
+  const received: Snapshot[] = []
+  let notify = () => {}
+  socket.on('message', (data) => {
+    received.push(parseSnapshot(data.toString())!)
+    notify()
   })
+  return {
+    socket,
+    send: (action: Action | string) => socket.send(typeof action === 'string' ? action : JSON.stringify(action)),
+    async next(matches: (snapshot: Snapshot) => boolean = () => true): Promise<Snapshot> {
+      for (;;) {
+        const found = received.splice(0).find(matches)
+        if (found) return found
+        await new Promise<void>((resolve) => (notify = resolve))
+      }
+    },
+  }
 }
 
-test('un cliente recibe el color actual al conectarse y luego cada cambio', () =>
+const opened = (socket: WebSocket) => new Promise((resolve) => socket.once('open', resolve))
+const closed = (socket: WebSocket) => new Promise((resolve) => socket.once('close', resolve))
+
+test('la primera foto trae nueve cruces, los ajustes por defecto y un conectado', () =>
   withServer(async (port) => {
-    assert.deepEqual(await collect(port, 4), ['rojo', 'verde', 'amarillo', 'rojo'])
+    const snapshot = await connect(port).next()
+    assert.equal(snapshot.crossings.length, 9)
+    assert.deepEqual(snapshot.settings, { volume: 20, greenMs: 6000 })
+    assert.equal(snapshot.clients, 1)
   }))
 
-test('dos clientes reciben la misma secuencia', () =>
+test('adelantar un cruce desde un cliente se ve en todos', () =>
   withServer(async (port) => {
-    const [a, b] = await Promise.all([collect(port, 3), collect(port, 3)])
-    assert.deepEqual(a, ['rojo', 'verde', 'amarillo'])
-    assert.deepEqual(b, a)
+    const a = connect(port)
+    const b = connect(port)
+    await Promise.all([opened(a.socket), opened(b.socket)])
+    a.send({ type: 'advance', crossing: 4 })
+    const isYellow = (snapshot: Snapshot) => snapshot.crossings[4] === 'h-yellow'
+    await Promise.all([a.next(isYellow), b.next(isYellow)])
   }))
 
-test('el ciclo avanza sin clientes y quien llega tarde ve el color actual', () =>
+test('un ajuste llega a todos y a quien se conecta después', () =>
   withServer(async (port) => {
-    await sleep(TICK * 1.5)
-    assert.deepEqual(await collect(port, 1), ['verde'])
+    const a = connect(port)
+    const b = connect(port)
+    await Promise.all([opened(a.socket), opened(b.socket)])
+    a.send({ type: 'settings', volume: 60, greenMs: undefined })
+    const isMax = (snapshot: Snapshot) => snapshot.settings.volume === 60
+    await Promise.all([a.next(isMax), b.next(isMax)])
+    assert.equal((await connect(port).next()).settings.volume, 60)
   }))
 
-test('la desconexión de un cliente no afecta a los demás', () =>
+test('si dos clientes cambian el mismo ajuste, vale el último recibido', () =>
   withServer(async (port) => {
-    await collect(port, 1)
-    assert.equal((await collect(port, 3)).length, 3)
+    const a = connect(port)
+    const b = connect(port)
+    await Promise.all([opened(a.socket), opened(b.socket)])
+    a.send({ type: 'settings', volume: undefined, greenMs: 3000 })
+    await b.next((snapshot) => snapshot.settings.greenMs === 3000)
+    b.send({ type: 'settings', volume: undefined, greenMs: 9000 })
+    const isLast = (snapshot: Snapshot) => snapshot.settings.greenMs === 9000
+    await Promise.all([a.next(isLast), b.next(isLast)])
   }))
 
-test('lo que envía un cliente no altera el ciclo', () =>
+test('las fotos cuentan cuántos clientes hay conectados', () =>
   withServer(async (port) => {
-    const colors = await collect(port, 4, (ws) => ws.send('verde ya'))
-    assert.deepEqual(colors, ['rojo', 'verde', 'amarillo', 'rojo'])
+    const a = connect(port)
+    const b = connect(port)
+    await a.next((snapshot) => snapshot.clients === 2)
+    const c = connect(port)
+    await a.next((snapshot) => snapshot.clients === 3)
+    c.socket.close()
+    await a.next((snapshot) => snapshot.clients === 2)
+    b.socket.close()
   }))
+
+test('los mensajes inválidos o demasiado grandes no alteran la ciudad', () =>
+  withServer(async (port) => {
+    const a = connect(port)
+    const b = connect(port)
+    const c = connect(port)
+    await Promise.all([opened(a.socket), opened(b.socket), opened(c.socket)])
+    a.send('esto no es json')
+    a.send('{"type":"advance","crossing":99}')
+    c.send(JSON.stringify({ type: 'settings', volume: 60, relleno: 'x'.repeat(5000) }))
+    await closed(c.socket)
+
+    await b.next()
+    const snapshot = await b.next()
+    assert.deepEqual(snapshot.settings, { volume: 20, greenMs: 6000 })
+    assert.ok(snapshot.crossings.every((phase) => phase === 'h-green'))
+  }))
+
+test('la ciudad corre aunque no haya nadie conectado', () =>
+  withServer(async (port) => {
+    await sleep(300)
+    assert.ok((await connect(port).next()).cars.length > 0)
+  }, () => 0))

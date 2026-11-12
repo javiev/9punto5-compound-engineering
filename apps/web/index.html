@@ -3,16 +3,30 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Semáforo</title>
+    <title>Ciudad con tráfico</title>
   </head>
   <body>
     <main>
-      <div class="semaforo" aria-hidden="true">
-        <span class="luz" data-color="rojo"></span>
-        <span class="luz" data-color="amarillo"></span>
-        <span class="luz" data-color="verde"></span>
+      <header class="barra">
+        <p>Conectados: <output id="conectados">–</output></p>
+        <p>Autos esperando: <output id="esperando">–</output></p>
+        <p id="aviso" role="status"></p>
+      </header>
+
+      <div class="ciudad" id="ciudad">
+        <canvas id="mapa" width="800" height="800" aria-hidden="true"></canvas>
       </div>
-      <p id="estado" role="status">sin conexión</p>
+
+      <form class="controles">
+        <label>
+          <span>Tráfico: <output id="trafico-valor"></output> autos por minuto en cada entrada</span>
+          <input id="trafico" type="range" step="1" />
+        </label>
+        <label>
+          <span>Tiempo de verde: <output id="verde-valor"></output> s</span>
+          <input id="verde" type="range" step="1" />
+        </label>
+      </form>
     </main>
     <script type="module" src="/src/main.ts"></script>
   </body>
